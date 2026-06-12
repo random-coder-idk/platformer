@@ -1,22 +1,21 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Neon Runner</title>
+<title>Neon Runner - Multi Level Edition</title>
 
 <style>
 body{
     margin:0;
-    background:#050510;
     overflow:hidden;
-    font-family:Arial;
+    background:#050510;
+    font-family:Arial,sans-serif;
 }
 
 canvas{
     display:block;
     margin:auto;
-    background:
-    linear-gradient(#070719,#12002a);
+    background:linear-gradient(#070719,#12002a);
     image-rendering:pixelated;
 }
 
@@ -27,10 +26,10 @@ canvas{
     color:#00ffff;
     font-size:20px;
     text-shadow:0 0 10px cyan;
+    z-index:10;
 }
 </style>
 </head>
-
 <body>
 
 <div id="ui"></div>
@@ -42,8 +41,7 @@ const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const ui=document.getElementById("ui");
 
-const gravity=.8;
-
+const gravity=0.8;
 const keys={};
 
 document.addEventListener("keydown",e=>{
@@ -66,46 +64,163 @@ jump:15,
 ground:false,
 health:5,
 cores:0,
-dash:0
+dash:0,
+highJump:false
 };
 
-const platforms=[
+const levels=[
+
+{
+
+start:{x:80,y:200},
+
+platforms:[
 {x:0,y:560,w:1000,h:40},
 {x:120,y:470,w:180,h:20},
 {x:370,y:390,w:150,h:20},
 {x:600,y:300,w:180,h:20},
 {x:850,y:220,w:120,h:20},
 {x:420,y:180,w:140,h:20}
-];
+],
 
-const cores=[
+cores:[
 {x:200,y:430},
 {x:430,y:350},
 {x:650,y:260},
 {x:910,y:180},
 {x:470,y:140}
-];
+],
 
-const enemies=[
+enemies:[
 {x:320,y:530,w:40,h:30,dir:2},
 {x:540,y:360,w:40,h:30,dir:-2},
 {x:760,y:270,w:40,h:30,dir:2}
-];
+],
 
-const portal={
+portal:{
 x:470,
 y:120,
 w:60,
 h:60
+}
+
+},
+
+{
+
+start:{x:50,y:500},
+
+platforms:[
+{x:0,y:560,w:1000,h:40},
+{x:180,y:480,w:140,h:20},
+{x:380,y:400,w:140,h:20},
+{x:620,y:300,w:180,h:20},
+{x:860,y:200,w:120,h:20}
+],
+
+cores:[
+{x:210,y:440},
+{x:420,y:360},
+{x:670,y:260},
+{x:900,y:160}
+],
+
+enemies:[
+{x:280,y:520,w:40,h:30,dir:2},
+{x:540,y:370,w:40,h:30,dir:-2},
+{x:760,y:270,w:40,h:30,dir:2}
+],
+
+portal:{
+x:900,
+y:140,
+w:60,
+h:60
+}
+
+},
+
+{
+
+start:{x:40,y:500},
+
+platforms:[
+{x:0,y:560,w:1000,h:40},
+{x:120,y:500,w:100,h:20},
+{x:280,y:420,w:120,h:20},
+{x:500,y:340,w:120,h:20},
+{x:720,y:260,w:120,h:20},
+{x:880,y:180,w:100,h:20}
+],
+
+cores:[
+{x:150,y:460},
+{x:310,y:380},
+{x:530,y:300},
+{x:750,y:220},
+{x:910,y:140}
+],
+
+enemies:[
+{x:200,y:530,w:40,h:30,dir:2},
+{x:450,y:370,w:40,h:30,dir:-2},
+{x:700,y:290,w:40,h:30,dir:2}
+],
+
+portal:{
+x:910,
+y:120,
+w:60,
+h:60
+}
+
+}
+
+];
+
+let currentLevel=0;
+
+let platforms=[];
+let cores=[];
+let enemies=[];
+let portal={};
+
+const hiddenUpgrade={
+x:35,
+y:520,
+w:14,
+h:14,
+found:false
 };
 
+function loadLevel(index){
+
+currentLevel=index;
+
+const level=levels[index];
+
+platforms=structuredClone(level.platforms);
+cores=structuredClone(level.cores);
+enemies=structuredClone(level.enemies);
+portal=structuredClone(level.portal);
+
+player.x=level.start.x;
+player.y=level.start.y;
+player.vx=0;
+player.vy=0;
+player.cores=0;
+
+}
+
 function rect(a,b){
+
 return(
 a.x<b.x+b.w &&
 a.x+a.w>b.x &&
 a.y<b.y+b.h &&
 a.y+a.h>b.y
 );
+
 }
 
 function update(){
@@ -118,13 +233,17 @@ else
 player.vx*=0.8;
 
 if((keys[" "]||keys["w"]||keys["arrowup"])&&player.ground){
+
 player.vy=-player.jump;
 player.ground=false;
+
 }
 
-if((keys["shift"])&&player.dash<=0){
+if(keys["shift"]&&player.dash<=0){
+
 player.vx*=4;
 player.dash=40;
+
 }
 
 player.dash--;
@@ -145,10 +264,29 @@ player.y+player.h>p.y &&
 player.y+player.h<p.y+20 &&
 player.vy>=0
 ){
+
 player.y=p.y-player.h;
 player.vy=0;
 player.ground=true;
+
 }
+
+}
+
+if(
+currentLevel===0 &&
+!hiddenUpgrade.found &&
+player.x<hiddenUpgrade.x+hiddenUpgrade.w &&
+player.x+player.w>hiddenUpgrade.x &&
+player.y<hiddenUpgrade.y+hiddenUpgrade.h &&
+player.y+player.h>hiddenUpgrade.y
+){
+
+hiddenUpgrade.found=true;
+player.highJump=true;
+player.jump=22;
+
+alert("SECRET FOUND!\nHigh Jump Module Installed!");
 
 }
 
@@ -162,8 +300,10 @@ player.x+player.w>c.x &&
 player.y<c.y+20 &&
 player.y+player.h>c.y
 ){
+
 c.collected=true;
 player.cores++;
+
 }
 
 }
@@ -181,8 +321,8 @@ if(rect(player,e)){
 
 player.health--;
 
-player.x=80;
-player.y=100;
+player.x=levels[currentLevel].start.x;
+player.y=levels[currentLevel].start.y;
 player.vx=0;
 player.vy=0;
 
@@ -190,7 +330,14 @@ if(player.health<=0){
 
 alert("GAME OVER");
 
-location.reload();
+player.health=5;
+player.jump=15;
+player.highJump=false;
+hiddenUpgrade.found=false;
+
+loadLevel(0);
+
+return;
 
 }
 
@@ -203,16 +350,35 @@ player.cores===cores.length &&
 rect(player,portal)
 ){
 
-alert("YOU ESCAPED THE MEGACITY!");
+currentLevel++;
 
-location.reload();
+if(currentLevel>=levels.length){
+
+alert("YOU COMPLETED ALL LEVELS!");
+
+player.health=5;
+player.jump=15;
+player.highJump=false;
+hiddenUpgrade.found=false;
+
+loadLevel(0);
+
+}else{
+
+alert("LEVEL "+currentLevel+" COMPLETE!");
+
+loadLevel(currentLevel);
+
+}
 
 }
 
 ui.innerHTML=
 "Health: "+player.health+
-"<br>Energy Cores: "+
-player.cores+"/"+cores.length;
+"<br>Level: "+(currentLevel+1)+"/"+levels.length+
+"<br>Energy Cores: "+player.cores+"/"+cores.length+
+"<br>Jump Module: "+
+(player.highJump?"INSTALLED":"NONE");
 
 }
 
@@ -238,6 +404,59 @@ ctx.stroke();
 
 }
 
+function drawRobot(){
+
+ctx.shadowBlur=15;
+ctx.shadowColor="#00ffff";
+
+/* body */
+ctx.fillStyle="#7ed7ff";
+ctx.fillRect(player.x+6,player.y+16,23,28);
+
+/* head */
+ctx.fillStyle="#d6d6d6";
+ctx.fillRect(player.x+4,player.y,27,18);
+
+/* eyes */
+ctx.fillStyle="#00ffff";
+ctx.fillRect(player.x+9,player.y+6,4,4);
+ctx.fillRect(player.x+22,player.y+6,4,4);
+
+/* mouth */
+ctx.fillStyle="#555";
+
+for(let i=0;i<5;i++){
+
+ctx.fillRect(player.x+8+i*4,player.y+13,2,1);
+
+}
+
+/* antenna */
+
+ctx.strokeStyle="#ff00ff";
+ctx.beginPath();
+ctx.moveTo(player.x+17,player.y);
+ctx.lineTo(player.x+17,player.y-8);
+ctx.stroke();
+
+ctx.fillStyle="#ff00ff";
+ctx.beginPath();
+ctx.arc(player.x+17,player.y-10,2,0,Math.PI*2);
+ctx.fill();
+
+/* arms */
+
+ctx.fillStyle="#bbbbbb";
+ctx.fillRect(player.x,player.y+20,6,16);
+ctx.fillRect(player.x+29,player.y+20,6,16);
+
+/* legs */
+
+ctx.fillRect(player.x+8,player.y+44,5,6);
+ctx.fillRect(player.x+22,player.y+44,5,6);
+
+}
+
 function render(){
 
 ctx.clearRect(0,0,1000,600);
@@ -246,20 +465,21 @@ drawBackground();
 
 for(let p of platforms){
 
-ctx.fillStyle="#ff00ff";
 ctx.shadowBlur=20;
 ctx.shadowColor="#ff00ff";
+ctx.fillStyle="#ff00ff";
 ctx.fillRect(p.x,p.y,p.w,p.h);
 
 }
-
-ctx.shadowBlur=15;
 
 for(let c of cores){
 
 if(!c.collected){
 
+ctx.shadowBlur=12;
+ctx.shadowColor="#00ffff";
 ctx.fillStyle="#00ffff";
+
 ctx.beginPath();
 ctx.arc(c.x+10,c.y+10,8,0,Math.PI*2);
 ctx.fill();
@@ -268,31 +488,42 @@ ctx.fill();
 
 }
 
-ctx.fillStyle="#00ff88";
+if(currentLevel===0 && !hiddenUpgrade.found){
+
+ctx.shadowBlur=5;
+ctx.shadowColor="#00ff00";
+ctx.fillStyle="rgba(0,255,255,0.08)";
+ctx.fillRect(
+hiddenUpgrade.x,
+hiddenUpgrade.y,
+hiddenUpgrade.w,
+hiddenUpgrade.h
+);
+
+}
 
 for(let e of enemies){
 
+ctx.shadowBlur=12;
 ctx.shadowColor="#00ff88";
+
+ctx.fillStyle="#00ff88";
 ctx.fillRect(e.x,e.y,e.w,e.h);
 
 ctx.fillStyle="red";
 ctx.fillRect(e.x+8,e.y+8,6,6);
 ctx.fillRect(e.x+26,e.y+8,6,6);
 
-ctx.fillStyle="#00ff88";
-
 }
 
-ctx.shadowColor="#00ffff";
-
-ctx.fillStyle="#00ffff";
-ctx.fillRect(player.x,player.y,player.w,player.h);
+drawRobot();
 
 if(player.cores===cores.length){
 
+ctx.shadowBlur=20;
+ctx.shadowColor="#ffff00";
 ctx.strokeStyle="#ffff00";
 ctx.lineWidth=4;
-ctx.shadowColor="#ffff00";
 
 ctx.beginPath();
 ctx.arc(
@@ -302,7 +533,6 @@ portal.y+30,
 0,
 Math.PI*2
 );
-
 ctx.stroke();
 
 }
@@ -313,11 +543,11 @@ function loop(){
 
 update();
 render();
-
 requestAnimationFrame(loop);
 
 }
 
+loadLevel(0);
 loop();
 
 </script>
