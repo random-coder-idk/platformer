@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Neon Runner</title>
+
+<style>
+body{
+    margin:0;
+    background:#050510;
+    overflow:hidden;
+    font-family:Arial;
+}
+
+canvas{
+    display:block;
+    margin:auto;
+    background:
+    linear-gradient(#070719,#12002a);
+    image-rendering:pixelated;
+}
+
+#ui{
+    position:absolute;
+    top:10px;
+    left:10px;
+    color:#00ffff;
+    font-size:20px;
+    text-shadow:0 0 10px cyan;
+}
+</style>
+</head>
+
+<body>
+
+<div id="ui"></div>
+<canvas id="game" width="1000" height="600"></canvas>
+
+<script>
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const ui=document.getElementById("ui");
+
+const gravity=.8;
+
+const keys={};
+
+document.addEventListener("keydown",e=>{
+keys[e.key.toLowerCase()]=true;
+});
+
+document.addEventListener("keyup",e=>{
+keys[e.key.toLowerCase()]=false;
+});
+
+const player={
+x:80,
+y:200,
+w:35,
+h:50,
+vx:0,
+vy:0,
+speed:5,
+jump:15,
+ground:false,
+health:5,
+cores:0,
+dash:0
+};
+
+const platforms=[
+{x:0,y:560,w:1000,h:40},
+{x:120,y:470,w:180,h:20},
+{x:370,y:390,w:150,h:20},
+{x:600,y:300,w:180,h:20},
+{x:850,y:220,w:120,h:20},
+{x:420,y:180,w:140,h:20}
+];
+
+const cores=[
+{x:200,y:430},
+{x:430,y:350},
+{x:650,y:260},
+{x:910,y:180},
+{x:470,y:140}
+];
+
+const enemies=[
+{x:320,y:530,w:40,h:30,dir:2},
+{x:540,y:360,w:40,h:30,dir:-2},
+{x:760,y:270,w:40,h:30,dir:2}
+];
+
+const portal={
+x:470,
+y:120,
+w:60,
+h:60
+};
+
+function rect(a,b){
+return(
+a.x<b.x+b.w &&
+a.x+a.w>b.x &&
+a.y<b.y+b.h &&
+a.y+a.h>b.y
+);
+}
+
+function update(){
+
+if(keys["a"]||keys["arrowleft"])
+player.vx=-player.speed;
+else if(keys["d"]||keys["arrowright"])
+player.vx=player.speed;
+else
+player.vx*=0.8;
+
+if((keys[" "]||keys["w"]||keys["arrowup"])&&player.ground){
+player.vy=-player.jump;
+player.ground=false;
+}
+
+if((keys["shift"])&&player.dash<=0){
+player.vx*=4;
+player.dash=40;
+}
+
+player.dash--;
+
+player.vy+=gravity;
+
+player.x+=player.vx;
+player.y+=player.vy;
+
+player.ground=false;
+
+for(let p of platforms){
+
+if(
+player.x+player.w>p.x &&
+player.x<p.x+p.w &&
+player.y+player.h>p.y &&
+player.y+player.h<p.y+20 &&
+player.vy>=0
+){
+player.y=p.y-player.h;
+player.vy=0;
+player.ground=true;
+}
+
+}
+
+for(let c of cores){
+
+if(!c.collected){
+
+if(
+player.x<c.x+20 &&
+player.x+player.w>c.x &&
+player.y<c.y+20 &&
+player.y+player.h>c.y
+){
+c.collected=true;
+player.cores++;
+}
+
+}
+
+}
+
+for(let e of enemies){
+
+e.x+=e.dir;
+
+if(e.x<0||e.x>960)
+e.dir*=-1;
+
+if(rect(player,e)){
+
+player.health--;
+
+player.x=80;
+player.y=100;
+player.vx=0;
+player.vy=0;
+
+if(player.health<=0){
+
+alert("GAME OVER");
+
+location.reload();
+
+}
+
+}
+
+}
+
+if(
+player.cores===cores.length &&
+rect(player,portal)
+){
+
+alert("YOU ESCAPED THE MEGACITY!");
+
+location.reload();
+
+}
+
+ui.innerHTML=
+"Health: "+player.health+
+"<br>Energy Cores: "+
+player.cores+"/"+cores.length;
+
+}
+
+function drawBackground(){
+
+for(let i=0;i<40;i++){
+
+ctx.fillStyle="rgba(255,0,255,.15)";
+ctx.fillRect(i*30,200+Math.sin(i)*30,20,400);
+
+}
+
+ctx.strokeStyle="#00ffff22";
+
+for(let x=0;x<1000;x+=40){
+
+ctx.beginPath();
+ctx.moveTo(x,0);
+ctx.lineTo(x,600);
+ctx.stroke();
+
+}
+
+}
+
+function render(){
+
+ctx.clearRect(0,0,1000,600);
+
+drawBackground();
+
+for(let p of platforms){
+
+ctx.fillStyle="#ff00ff";
+ctx.shadowBlur=20;
+ctx.shadowColor="#ff00ff";
+ctx.fillRect(p.x,p.y,p.w,p.h);
+
+}
+
+ctx.shadowBlur=15;
+
+for(let c of cores){
+
+if(!c.collected){
+
+ctx.fillStyle="#00ffff";
+ctx.beginPath();
+ctx.arc(c.x+10,c.y+10,8,0,Math.PI*2);
+ctx.fill();
+
+}
+
+}
+
+ctx.fillStyle="#00ff88";
+
+for(let e of enemies){
+
+ctx.shadowColor="#00ff88";
+ctx.fillRect(e.x,e.y,e.w,e.h);
+
+ctx.fillStyle="red";
+ctx.fillRect(e.x+8,e.y+8,6,6);
+ctx.fillRect(e.x+26,e.y+8,6,6);
+
+ctx.fillStyle="#00ff88";
+
+}
+
+ctx.shadowColor="#00ffff";
+
+ctx.fillStyle="#00ffff";
+ctx.fillRect(player.x,player.y,player.w,player.h);
+
+if(player.cores===cores.length){
+
+ctx.strokeStyle="#ffff00";
+ctx.lineWidth=4;
+ctx.shadowColor="#ffff00";
+
+ctx.beginPath();
+ctx.arc(
+portal.x+30,
+portal.y+30,
+25,
+0,
+Math.PI*2
+);
+
+ctx.stroke();
+
+}
+
+}
+
+function loop(){
+
+update();
+render();
+
+requestAnimationFrame(loop);
+
+}
+
+loop();
+
+</script>
+
+</body>
+</html>
